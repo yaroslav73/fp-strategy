@@ -10,14 +10,10 @@ enum Tree[A] { self =>
       case Node(left, right) => Node(left.map(f), right.map(f))
 
   def size: Int =
-    self match
-      case Leaf(_)           => 1
-      case Node(left, right) => left.size + right.size
+    self.fold(0)((_, acc) => acc + 1)
 
   def contains(elem: A): Boolean =
-    self match
-      case Leaf(a)           => a == elem
-      case Node(left, right) => left.contains(elem) || right.contains(elem)
+    self.fold(false)((a, b) => a == elem || b)
 
   def fold[B](zero: B)(f: (A, B) => B): B =
     self match
