@@ -5,9 +5,7 @@ enum Tree[A] { self =>
   case Node(left: Tree[A], right: Tree[A])
 
   def map[B](f: A => B): Tree[B] =
-    self match
-      case Leaf(value)       => Leaf(f(value))
-      case Node(left, right) => Node(left.map(f), right.map(f))
+    self.fold(v => Leaf(f(v)))((l, r) => Node(l, r))
 
   def size: Int =
     self.fold(0)((_, acc) => acc + 1)
@@ -19,6 +17,12 @@ enum Tree[A] { self =>
     self match
       case Leaf(value)       => f(value, zero)
       case Node(left, right) => right.fold(left.fold(zero)(f))(f)
+
+  // author solution
+  def fold[B](leaf: A => B)(node: (B, B) => B): B =
+    self match
+      case Leaf(v)           => leaf(v)
+      case Node(left, right) => node(left.fold(leaf)(node), right.fold(leaf)(node))
 }
 
 object Tree {
