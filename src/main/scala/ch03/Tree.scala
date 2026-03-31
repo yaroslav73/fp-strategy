@@ -8,10 +8,10 @@ enum Tree[A] { self =>
     self.fold(v => Leaf(f(v)))((l, r) => Node(l, r))
 
   def size: Int =
-    self.fold(0)((_, acc) => acc + 1)
+    self.fold(_ => 1)((_, acc) => acc + 1)
 
   def contains(elem: A): Boolean =
-    self.fold(false)((a, b) => a == elem || b)
+    self.fold(_ == elem)(_ || _)
 
   def fold[B](zero: B)(f: (A, B) => B): B =
     self match
