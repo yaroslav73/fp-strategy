@@ -1,8 +1,8 @@
-## sbt project compiled with Scala 3
+## Code examples, task solutions from the book Functional Programming Strategies
 
-### Usage
+### Functional Programming Strategies
+#### Mental models for better code
+##### A book by [Noel Welsh](https://www.noelwelsh.com/)
 
-This is a normal sbt project. You can compile code with `sbt compile`, run it with `sbt run`, and `sbt console` will start a Scala 3 REPL.
+# TODO
 
-For more information on the sbt-dotty plugin, see the
-[scala3-example-project](https://github.com/scala/scala3-example-project/blob/main/README.md).
