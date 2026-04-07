@@ -86,25 +86,47 @@ import ch04.Bool.{ False, True }
   // This mirrors the signature of foldRight:
   // def foldRight[A, B](nil: B)(cons: (A, B) => B): B
   // So a List[A, B] is its own fold. For example:
-  // - The empty list just returns the base case:`(b, f) => b
+  // - The empty list just returns the base case: (b, f) => b
   // - A list [1, 2, 3] with a sum fold `(0, _ + _) computes 1 + (2 + (3 + 0)) = 6
 
+//  (B, (A, B) => B) => B this is our List[A, B]
+//  val Empty: [A, B] => () => (B, (A, B) => B) => B =
+//    [A, B] => () => (b: B, f: (A, B) => B) => b
   val Empty: [A, B] => () => List[A, B] =
     [A, B] => () => (b: B, f: (A, B) => B) => b
 
+//  (B, (A, B) => B) => B this is our List[A, B]
+//  val Pair: [A, B] => (A, (B, (A, B) => B) => B) => (B, (A, B) => B) => B =
+//    [A, B] => (head: A, tail: (B, (A, B) => B) => B) => (empty: B, f: (A, B) => B) => f(head, tail(empty, f))
   val Pair: [A, B] => (A, List[A, B]) => List[A, B] =
     [A, B] => (head: A, tail: List[A, B]) => (empty: B, f: (A, B) => B) => f(head, tail(empty, f))
 
   val list: [B] => () => List[Int, B] =
     [B] => () => Pair(1, Pair(2, Pair(3, Empty())))
   println(s"List: $list")
-  println(s"List: ${list()("", (b, f) => s"$b :: $f")}")
+  println(s"List: ${list()("", (b, f) => s"$b :: $f")}") // Here B is String
 
-  val sum = list()(0, (a: Int, b: Int) => a + b)
+  val sum = list()(0, (a: Int, b: Int) => a + b) // Here B is Int
   println(s"Sum of the list: $sum")
 
   val product = list()(1, (a: Int, b: Int) => a * b)
   println(s"Product of the list: $product")
   
-  
-  
+  type ListInt = (Int, (Int, Int) => Int) => Int
+  val EmptyInt: ListInt =
+    (b: Int, f: (Int, Int) => Int) => b
+
+  val PairInt: (Int, ListInt) => ListInt =
+    (head: Int, tail: ListInt) => (empty: Int, f: (Int, Int) => Int) => f(head, tail(empty, f))
+  val listInt: ListInt =
+    Pair(1, Pair(2, Pair(3, Empty())))
+  println(s"List: $listInt")
+  // println(s"List: ${listInt("", (b, f) => s"$b :: $f")}")
+  // This doesn't work because ListInt is not a function that takes a String
+  // and a function, it's a function that takes an Int and a function.
+
+  val sumInts = listInt(0, (a: Int, b: Int) => a + b)
+  println(s"Sum of the list ints: $sumInts")
+
+  val productInts = listInt(1, (a: Int, b: Int) => a * b)
+  println(s"Product of the list ints: $productInts")
