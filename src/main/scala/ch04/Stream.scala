@@ -32,7 +32,7 @@ trait Stream[A] { self =>
 
   def scanLeft[B](z: B)(f: (B, A) => B): Stream[B] =
     new Stream[B] {
-      def head: B         = z
+      def head: B         = f(z, self.head)
       def tail: Stream[B] = self.tail.scanLeft(f(z, self.head))(f)
     }
 }

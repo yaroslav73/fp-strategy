@@ -38,9 +38,9 @@ class StreamSuite extends munit.FunSuite {
   }
 
   test("Stream should scanLeft correctly") {
-    val s  = Stream.unfold(1, identity, _ + 1).scanLeft(0)(_ + _)
+    val s  = Stream.unfold(0, identity, _ + 1).scanLeft(0)(_ + _)
     val s1 = Stream.const(1).scanLeft(0)(_ + _)
     assertEquals(s.take(5), List(0, 1, 3, 6, 10))
-    assertEquals(s1.take(5), List(0, 1, 2, 3, 4))
+    assertEquals(s1.take(5), List(1, 2, 3, 4, 5))
   }
 }
