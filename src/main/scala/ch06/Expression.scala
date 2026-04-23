@@ -12,12 +12,18 @@ enum Expression {
   def *(that: Expression): Expression = Product(this, that)
   def /(that: Expression): Expression = Division(this, that)
 
-  def eval: Double =
-    this match {
-      case Value(value)          => value
-      case Sum(left, right)      => left.eval + right.eval
-      case Sub(left, right)      => left.eval - right.eval
-      case Product(left, right)  => left.eval * right.eval
-      case Division(left, right) => left.eval / right.eval
-    }
+  def eval: Double = {
+    type Continuation = Double => Double
+
+    def loop(expr: Expression, c: Continuation): Double =
+      expr match {
+        case Value(value)          => c(value)
+        case Sum(left, right)      => loop(left, l => loop(right, r => c(l + r)))
+        case Sub(left, right)      => loop(left, l => loop(right, r => c(l - r)))
+        case Product(left, right)  => loop(left, l => loop(right, r => c(l * r)))
+        case Division(left, right) => loop(left, l => loop(right, r => c(l / r)))
+      }
+
+    loop(this, identity)
+  }
 }
