@@ -7,19 +7,33 @@ enum Regexp {
   def `*`: Regexp                  = this.repeat
 
   def matches(input: String): Boolean = {
-    def loop(regexp: Regexp, index: Int): Option[Int] =
+    type Continuation = Option[Int] => Option[Int]
+
+    def loop(regexp: Regexp, index: Int, c: Continuation): Option[Int] =
       regexp match {
-        case Append(left, right)   => loop(left, index).flatMap(nextIndex => loop(right, nextIndex))
-        case OrElse(first, second) => loop(first, index).orElse(loop(second, index))
+        case Append(left, right) =>
+          val nextC: Continuation = {
+            case None            => c(None)
+            case Some(nextIndex) => loop(right, nextIndex, c)
+          }
+          loop(left, index, nextC)
+        case OrElse(first, second) =>
+          val nextC: Continuation = {
+            case None            => loop(second, index, c)
+            case Some(nextIndex) => c(Some(nextIndex))
+          }
+          loop(first, index, nextC)
         case Repeat(pattern) =>
-          loop(pattern, index)
-            .flatMap(nextIndex => loop(regexp, nextIndex))
-            .orElse(Some(index))
-        case Apply(s) => Option.when(input.startsWith(s, index))(index + s.length)
-        case Empty    => None
+          val nextC: Continuation = {
+            case None            => c(Some(index))
+            case Some(nextIndex) => loop(regexp, nextIndex, c)
+          }
+          loop(pattern, index, nextC)
+        case Apply(s) => c(Option.when(input.startsWith(s, index))(index + s.length))
+        case Empty    => c(None)
       }
 
-    loop(this, 0).contains(input.length)
+    loop(this, 0, identity).contains(input.length)
   }
 
   case Append(left: Regexp, right: Regexp)
