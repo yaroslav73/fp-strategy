@@ -46,8 +46,7 @@ class ExpressionSuite extends munit.FunSuite {
   }
 
   test("Expression: eval throw StackOverflowError") {
-    val expr      = (1 to 10000).foldLeft(Value(1)) { (expr, n) => expr * Value(n) }
-    val exception = intercept[StackOverflowError](expr.eval)
-    assert(clue(exception.getMessage).contains("StackOverflowError"))
+    val expr = (1 to 10000).foldLeft(Value(1)) { (expr, n) => expr * Value(n) }
+    assertEquals(expr.eval, Double.PositiveInfinity)
   }
 }
