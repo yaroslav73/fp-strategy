@@ -1,5 +1,7 @@
 package ch06
 
+import scala.annotation.tailrec
+
 enum Regexp {
   def ++(that: Regexp): Regexp     = Append(this, that)
   def orElse(that: Regexp): Regexp = OrElse(this, that)
@@ -7,33 +9,47 @@ enum Regexp {
   def `*`: Regexp                  = this.repeat
 
   def matches(input: String): Boolean = {
-    type Continuation = Option[Int] => Option[Int]
+    type Continuation = Option[Int] => Call
 
-    def loop(regexp: Regexp, index: Int, c: Continuation): Option[Int] =
+    enum Call {
+      case Loop(regexp: Regexp, index: Int, c: Continuation)
+      case Continue(nextIndex: Option[Int], c: Continuation)
+      case Done(index: Option[Int])
+    }
+
+    def loop(regexp: Regexp, index: Int, c: Continuation): Call =
       regexp match {
         case Append(left, right) =>
           val nextC: Continuation = {
-            case None            => c(None)
-            case Some(nextIndex) => loop(right, nextIndex, c)
+            case None            => Call.Continue(None, c)
+            case Some(nextIndex) => Call.Loop(right, nextIndex, c)
           }
-          loop(left, index, nextC)
+          Call.Loop(left, index, nextC)
         case OrElse(first, second) =>
           val nextC: Continuation = {
-            case None            => loop(second, index, c)
-            case Some(nextIndex) => c(Some(nextIndex))
+            case None            => Call.Loop(second, index, c)
+            case Some(nextIndex) => Call.Continue(Some(nextIndex), c)
           }
-          loop(first, index, nextC)
+          Call.Loop(first, index, nextC)
         case Repeat(pattern) =>
           val nextC: Continuation = {
-            case None            => c(Some(index))
-            case Some(nextIndex) => loop(regexp, nextIndex, c)
+            case None            => Call.Continue(Some(index), c)
+            case Some(nextIndex) => Call.Loop(regexp, nextIndex, c)
           }
-          loop(pattern, index, nextC)
-        case Apply(s) => c(Option.when(input.startsWith(s, index))(index + s.length))
-        case Empty    => c(None)
+          Call.Loop(pattern, index, nextC)
+        case Apply(s) => Call.Continue(Option.when(input.startsWith(s, index))(index + s.length), c)
+        case Empty    => Call.Continue(None, c)
       }
 
-    loop(this, 0, identity).contains(input.length)
+    @tailrec
+    def trampoline(next: Call): Option[Int] =
+      next match {
+        case Call.Loop(regexp, index, c) => trampoline(loop(regexp, index, c))
+        case Call.Continue(nextIndex, c) => trampoline(c(nextIndex))
+        case Call.Done(index)            => index
+      }
+
+    trampoline(loop(this, 0, opt => Call.Done(opt))).contains(input.length)
   }
 
   case Append(left: Regexp, right: Regexp)

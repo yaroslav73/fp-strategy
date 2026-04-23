@@ -10,9 +10,6 @@ class RegexpSuite extends munit.FunSuite {
 
   test("Regexp: matches Append") {
     assert((Apply("a") ++ Apply("b")).matches("ab"))
-//    assert(!(Apply("a") ++ Apply("b")).matches("a"))
-//    assert(!(Apply("a") ++ Apply("b")).matches("b"))
-//    assert(!(Apply("a") ++ Apply("b")).matches(""))
   }
 
   test("Regexp: matches OrElse") {
@@ -41,8 +38,7 @@ class RegexpSuite extends munit.FunSuite {
     assert(Apply("a").orElse(Apply("b").repeat).matches("bbb"))
   }
 
-  test("Regexp: fail with StackOverflow") {
-    val exception = intercept[StackOverflowError](Regexp("a").repeat.matches("a" * 20000))
-    assert(clue(exception.getMessage).contains("StackOverflowError"))
+  test("Regexp: should not fail with StackOverflow") {
+    assert(Regexp("a").repeat.matches("a" * 20000))
   }
 }
