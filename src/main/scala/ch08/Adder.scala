@@ -1,19 +1,12 @@
 package ch08
 
 object Adder:
-  def add(xs: List[Int]): Int =
-    xs.foldLeft(0)(_ + _) // sum
+  def add[T](xs: List[T])(using m: Monoid[T]): T =
+    xs.foldLeft(m.empty)(m.combine)
 
-  def addOpt(xs: List[Option[Int]]): Int =
-    xs.foldLeft(0) { (acc, x) =>
-      x match
-        case Some(v) => acc + v
-        case None    => acc
-    }
-    
-  final case class Order(id: String, quantity: Int, price: BigDecimal)
-    
-  def addOrders(orders: List[Order]): BigDecimal =
-    orders.foldLeft(BigDecimal(0)) { (acc, order) =>
-      acc + (order.quantity * order.price)
-    }
+  final case class Order(quantity: Int, price: BigDecimal)
+  object Order:
+    given orderMonoid: Monoid[Order] with
+      def empty: Order = Order(0, BigDecimal(0))
+      def combine(x: Order, y: Order): Order =
+        Order(quantity = x.quantity + y.quantity, price = x.price + y.price)
