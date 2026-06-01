@@ -1,0 +1,34 @@
+package ch10
+
+import cats.Eval
+
+class ExercisesSuite extends munit.FunSuite {
+  type ExceptionOr[A] = Either[Throwable, A]
+
+  test("validateAdult should return age if 18 or older") {
+    val result = validateAdult[ExceptionOr](20)
+    assertEquals(result, Right(20))
+  }
+
+  test("validateAdult should return an error if under 18") {
+    val result = validateAdult[ExceptionOr](16)
+    assert(result.isLeft)
+    result.left.foreach { error => assertEquals(error.getMessage, "Age must be 18 or older") }
+  }
+
+  test("foldRight should correctly fold a list") {
+    val result = foldRight(List(1, 2, 3), 0)(_ + _)
+    assertEquals(result.value, 6)
+  }
+
+  test("foldRight should return the accumulator for an empty list") {
+    val result = foldRight(Nil, 42)((_, acc) => acc)
+    assertEquals(result.value, 42)
+  }
+
+  test("foldRight should be stack safe for large lists") {
+    val largeList = (1 to 100000).toList
+    val result    = foldRight(largeList, 0)(_ + _)
+    assertEquals(result.value, 705082704)
+  }
+}
