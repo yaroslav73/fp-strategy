@@ -2,7 +2,7 @@ package ch10
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class ExercisesSuite extends munit.FunSuite {
   type ExceptionOr[A] = Either[Throwable, A]
@@ -50,7 +50,30 @@ class ExercisesSuite extends munit.FunSuite {
       Future.sequence(Vector(Future(factorial1(3)), Future(factorial1(4)))),
       5.seconds
     )
-    
+
     res.foreach(writer => writer.written.foreach(println))
+  }
+
+  test("checkLogin should return true for valid credentials") {
+    val db = Database(
+      usernames = Map(1 -> "alice"),
+      passwords = Map("alice" -> "password123")
+    )
+
+    val result = checkLogin(1, "password123").run(db)
+    assertEquals(result, true)
+  }
+
+  test("checkLogin should return false for invalid credentials") {
+    val db = Database(
+      usernames = Map(1 -> "alice"),
+      passwords = Map("alice" -> "password123")
+    )
+
+    val result1 = checkLogin(1, "wrongpassword").run(db)
+    assertEquals(result1, false)
+
+    val result2 = checkLogin(2, "password123").run(db)
+    assertEquals(result2, false)
   }
 }

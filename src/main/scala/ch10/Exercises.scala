@@ -1,6 +1,6 @@
 package ch10
 
-import cats.data.Writer
+import cats.data.{ Reader, Writer }
 import cats.{ Eval, MonadError }
 import cats.implicits.{ catsSyntaxApplicativeId, catsSyntaxMonadError }
 
@@ -41,3 +41,25 @@ def factorial1(n: Int): Writer[Vector[String], Int] = {
 
   loop(acc = 1, Writer(Vector(s"[$thread]: Starting factorial($n)"), 1))
 }
+
+final case class Database(
+  usernames: Map[Int, String],
+  passwords: Map[String, String]
+)
+
+type DatabaseReader[A] = Reader[Database, A]
+
+def findUsername(userId: Int): DatabaseReader[Option[String]] =
+  Reader(db => db.usernames.get(userId))
+
+def checkPassword(username: String, password: String): DatabaseReader[Boolean] =
+  Reader(db => db.passwords.get(username).contains(password))
+
+def checkLogin(userId: Int, password: String): DatabaseReader[Boolean] =
+  for {
+    usernameOpt <- findUsername(userId)
+    isValid <- usernameOpt match {
+      case Some(username) => checkPassword(username, password)
+      case None           => Reader(_ => false)
+    }
+  } yield isValid

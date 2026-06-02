@@ -1,6 +1,6 @@
 package ch10
 
-import cats.data.Writer
+import cats.data.{ Reader, Writer }
 import cats.{ Eval, Monad, MonadError }
 import cats.syntax.all.*
 
@@ -273,4 +273,27 @@ import scala.util.Try
 
   val writer06 = writer01.swap
   println(s"writer06: ${writer06.run}")
+}
+
+@main def readerMonadExamples(): Unit = {
+  final case class Cat(name: String, favoriteFood: String)
+
+  val catName: Reader[Cat, String] = Reader(cat => cat.name)
+
+  println(catName.run(Cat("Garfield", "Lasagna")))
+
+  val greetKitty: Reader[Cat, String] = catName.map(name => s"Hello, $name!")
+  println(greetKitty.run(Cat("Garfield", "Lasagna")))
+
+  val feedKitty: Reader[Cat, String] = Reader(cat => s"Have a nice bowl of ${cat.favoriteFood}!")
+
+  val greetAndFeed: Reader[Cat, String] =
+    for {
+      greet <- greetKitty
+      feed  <- feedKitty
+    } yield s"$greet $feed"
+
+  println(greetAndFeed(Cat("Garfield", "Lasagna")))
+
+  println(greetAndFeed(Cat("Heathcliff", "Fish Sticks")))
 }
