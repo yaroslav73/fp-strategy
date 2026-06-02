@@ -1,6 +1,8 @@
 package ch10
 
-import cats.Eval
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class ExercisesSuite extends munit.FunSuite {
   type ExceptionOr[A] = Either[Throwable, A]
@@ -30,5 +32,25 @@ class ExercisesSuite extends munit.FunSuite {
     val largeList = (1 to 100000).toList
     val result    = foldRight(largeList, 0)(_ + _)
     assertEquals(result.value, 705082704)
+  }
+
+  test("factorial should compute factorial correctly") {
+    assertEquals(factorial(5), 120)
+  }
+
+  test("factorial should indicate execution") {
+    Await.result(
+      Future.sequence(Vector(Future(factorial(5)), Future(factorial(5)))),
+      5.seconds
+    )
+  }
+
+  test("factorial1 should indicate execution") {
+    val res = Await.result(
+      Future.sequence(Vector(Future(factorial1(3)), Future(factorial1(4)))),
+      5.seconds
+    )
+    
+    res.foreach(writer => writer.written.foreach(println))
   }
 }

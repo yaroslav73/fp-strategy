@@ -1,5 +1,6 @@
 package ch10
 
+import cats.data.Writer
 import cats.{ Eval, Monad, MonadError }
 import cats.syntax.all.*
 
@@ -222,6 +223,54 @@ import scala.util.Try
 
   def factorial(n: BigInt): Eval[BigInt] =
     if n == 1 then Eval.now(n) else Eval.defer(factorial(n - 1).map(_ * n))
-    
+
   factorial(50000).value // Works fine
+}
+
+@main def writerMonadExamples(): Unit = {
+  // type Writer[W, A] = WriterT[Id, W, A]
+  val res01 = Writer(Vector("It was the best of times", "It was the worst of times"), 1859)
+
+  type Logged[A] = Writer[Vector[String], A]
+
+  val res02 = 123.pure[Logged]
+  println(res02)
+
+  val res03 = Vector("Message 1", "Message 2").tell
+  println(res03)
+
+  val res04 = Writer(Vector("Message 1", "Message 2"), 123)
+  println(res04)
+
+  val res05 = 123.writer(Vector("Message 1", "Message 2"))
+  println(res05)
+
+  val aResult = res05.value
+  val aLog    = res05.written
+  println(s"aResult: $aResult and aLog: $aLog")
+
+  val (log, result) = res05.run
+  println(s"result: $result and log: $log")
+
+  val writer01 = for {
+    a <- 10.pure[Logged]
+    _ <- Vector("Added 10").tell
+    b <- 63.writer(Vector("Added 63"))
+  } yield a + b
+  println(s"writer01: ${writer01.run}")
+
+  val writer02 = writer01.mapWritten(_.map(_.toUpperCase))
+  println(s"writer02: ${writer02.run}")
+
+  val writer03 = writer01.bimap(log => log.map(_.toUpperCase), result => result * 2)
+  println(s"writer03: ${writer03.run}")
+
+  val writer04 = writer01.mapBoth((log, result) => (log.map(_.toUpperCase), result * 2))
+  println(s"writer04: ${writer04.run}")
+
+  val writer05 = writer01.reset
+  println(s"writer05: ${writer05.run}")
+
+  val writer06 = writer01.swap
+  println(s"writer06: ${writer06.run}")
 }
