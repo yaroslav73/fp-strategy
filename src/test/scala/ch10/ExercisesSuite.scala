@@ -76,4 +76,35 @@ class ExercisesSuite extends munit.FunSuite {
     val result2 = checkLogin(2, "password123").run(db)
     assertEquals(result2, false)
   }
+
+  test("evalOne should evaluate simple expressions") {
+    assertEquals(evalOne("73").runA(Nil).value, 73)
+  }
+
+  test("evalOne combined should evaluate multiple expressions") {
+    val program =
+      for {
+        _      <- evalOne("33")
+        _      <- evalOne("40")
+        result <- evalOne("+")
+      } yield result
+
+    assertEquals(program.runA(Nil).value, 73)
+  }
+
+  test("evalAll should evaluate a sequence of expressions") {
+    val program = evalAll(List("13", "40", "+", "20", "+"))
+    assertEquals(program.runA(Nil).value, 73)
+  }
+
+  test("evalAll combined should evaluate a longer sequence of expressions") {
+    val program =
+      for {
+        _      <- evalAll(List("1", "2", "+"))
+        _      <- evalAll(List("3", "4", "+"))
+        result <- evalOne("*")
+      } yield result
+
+    assertEquals(program.runA(Nil).value, 21)
+  }
 }

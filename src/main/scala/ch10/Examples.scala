@@ -1,6 +1,6 @@
 package ch10
 
-import cats.data.{ Reader, Writer }
+import cats.data.{ Reader, State, Writer }
 import cats.{ Eval, Monad, MonadError }
 import cats.syntax.all.*
 
@@ -296,4 +296,44 @@ import scala.util.Try
   println(greetAndFeed(Cat("Garfield", "Lasagna")))
 
   println(greetAndFeed(Cat("Heathcliff", "Fish Sticks")))
+}
+
+@main def stateMonadExamples(): Unit = {
+  // State[S, A] = StateT[Id, S, A]
+
+  val s = State[Int, String] { state => (state, s"The state is $state") }
+
+  println(s)
+  println(s.run(42).value)
+  println(s"Get the state: ${s.runS(42).value}")
+  println(s"Get the result: ${s.runA(42).value}")
+
+  val step1 = State[Int, String] { n => (n + 1, s"Result of step 1: ${n + 1}") }
+  val step2 = State[Int, String] { n => (n * 2, s"Result of step 2: ${n * 2}") }
+
+  val both =
+    for {
+      a <- step1
+      b <- step2
+    } yield (a, b)
+
+  println(both.run(20).value)
+
+  // get, set, pure, inspect, modify
+  println(s"get: ${State.get[Int].run(73).value}")
+  println(s"set: ${State.set[Int](21).run(73).value}")
+  println(s"pure: ${State.pure[Int, String]("Result").run(73).value}")
+  println(s"inspect: ${State.inspect[Int, String](x => s"$x!").run(73).value}")
+  println(s"modify: ${State.modify[Int](x => x + 33).run(40).value}")
+
+  val program: State[Int, (Int, Int, Int)] =
+    for {
+      a <- State.get[Int]
+      _ <- State.set[Int](a + 1)
+      b <- State.get[Int]
+      _ <- State.modify[Int](x => x * 2)
+      c <- State.inspect[Int, Int](x => x * 1000)
+    } yield (a, b, c)
+
+  println(program.run(1).value)
 }

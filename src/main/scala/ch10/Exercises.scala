@@ -1,6 +1,6 @@
 package ch10
 
-import cats.data.{ Reader, Writer }
+import cats.data.{ Reader, State, Writer }
 import cats.{ Eval, MonadError }
 import cats.implicits.{ catsSyntaxApplicativeId, catsSyntaxMonadError }
 
@@ -60,6 +60,32 @@ def checkLogin(userId: Int, password: String): DatabaseReader[Boolean] =
     usernameOpt <- findUsername(userId)
     isValid <- usernameOpt match {
       case Some(username) => checkPassword(username, password)
-      case None           => Reader(_ => false)
+      case None           => Reader[Database, Boolean](_ => false)
     }
   } yield isValid
+
+type CalcState[A] = State[List[Int], A]
+
+def evalOne(sym: String): CalcState[Int] = State[List[Int], Int] { oldStack =>
+  def updateStack(stack: List[Int], sym: String): List[Int] = {
+    println(s"Evaluating '$sym' with stack: $stack")
+    sym match {
+      case "+" if stack.size >= 2   => stack.head + stack.tail.head :: stack.tail.tail
+      case "*" if stack.size >= 2   => stack.head * stack.tail.head :: stack.tail.tail
+      case n if n.forall(_.isDigit) => n.toInt :: stack
+    }
+  }
+
+  val newStack = updateStack(oldStack, sym)
+  val result   = newStack.head
+
+  (newStack, result)
+}
+
+def evalAll(input: List[String]): CalcState[Int] =
+  input.foldLeft(State.pure[List[Int], Int](0)) { (state, sym) =>
+    state.flatMap(_ => evalOne(sym))
+  }
+
+def evalInput(input: String): CalcState[Int] =
+  evalAll(input.split(" ").toList)
