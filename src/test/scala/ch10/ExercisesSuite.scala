@@ -1,8 +1,10 @@
 package ch10
 
+import cats.implicits.{catsSyntaxApplicativeId, catsSyntaxFlatMapIdOps, toFlatMapOps}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 
 class ExercisesSuite extends munit.FunSuite {
   type ExceptionOr[A] = Either[Throwable, A]
@@ -106,5 +108,13 @@ class ExercisesSuite extends munit.FunSuite {
       } yield result
 
     assertEquals(program.runA(Nil).value, 21)
+  }
+
+  test("Tree tailRecM should be stack safe") {
+    val largeTree = (1 to 100000).foldLeft(Tree.leaf(0)) { (tree, n) =>
+      tree.flatMap(x => Tree.leaf(x + n))
+    }
+
+    assertEquals(largeTree, Tree.leaf(705082704))
   }
 }

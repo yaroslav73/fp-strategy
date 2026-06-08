@@ -1,7 +1,7 @@
 package ch10
 
 import cats.data.{ Reader, State, Writer }
-import cats.{ Eval, MonadError }
+import cats.{ Eval, Monad, MonadError }
 import cats.implicits.{ catsSyntaxApplicativeId, catsSyntaxMonadError }
 
 import scala.annotation.tailrec
@@ -89,3 +89,85 @@ def evalAll(input: List[String]): CalcState[Int] =
 
 def evalInput(input: String): CalcState[Int] =
   evalAll(input.split(" ").toList)
+
+enum Tree[+A] {
+  case Branch(left: Tree[A], right: Tree[A]) extends Tree[A]
+  case Leaf(value: A) extends Tree[A]
+}
+
+object Tree {
+  def branch[A](left: Tree[A], right: Tree[A]): Tree[A] =
+    Branch(left, right)
+  def leaf[A](value: A): Tree[A] =
+    Leaf(value)
+
+  given monadTree: Monad[Tree] = new Monad[Tree] {
+    def pure[A](x: A): Tree[A] = leaf(x)
+
+    def flatMap[A, B](fa: Tree[A])(f: A => Tree[B]): Tree[B] =
+      fa match {
+        case Leaf(value)         => f(value)
+        case Branch(left, right) => branch(flatMap(left)(f), flatMap(right)(f))
+      }
+
+    def tailRecM[A, B](a: A)(f: A => Tree[Either[A, B]]): Tree[B] = {
+      def loop(tree: Tree[Either[A, B]]): Tree[B] =
+        tree match {
+          case Leaf(Left(nextA))   => loop(f(nextA))
+          case Leaf(Right(b))      => leaf(b)
+          case Branch(left, right) => branch(loop(left), loop(right))
+        }
+
+      loop(f(a))
+    }
+
+    def tailRecM1[A, B](a: A)(f: A => Tree[Either[A, B]]): Tree[B] = {
+      type C = B => Call
+
+      enum Call {
+        case Loop(expr: Tree[Either[A, B]], c: C)
+        case Continue(value: B, c: C)
+        case Done(value: B)
+      }
+
+      def loop(tree: Tree[Either[A, B]], c: C): Call =
+        tree match {
+          case Leaf(Left(nextA))   => Call.Loop(f(nextA), c)
+          case Leaf(Right(b))      => Call.Continue(b, c)
+          case Branch(left, right) => Call.Loop(left, b => loop(right, c))
+        }
+
+      @tailrec
+      def trampoline(next: Call): B =
+        next match {
+          case Call.Loop(expr, c)      => trampoline(loop(expr, c))
+          case Call.Continue(value, c) => trampoline(c(value))
+          case Call.Done(value)        => value
+        }
+
+      leaf(trampoline(loop(f(a), b => Call.Done(b))))
+    }
+  }
+
+  def tailRecM2[A, B](a: A)(f: A => Tree[Either[A, B]]): Tree[B] = {
+
+    @tailrec
+    def loop(open: List[Tree[Either[A, B]]], closed: List[Option[Tree[B]]]): List[Tree[B]] =
+      open match {
+        case Leaf(Left(nextA)) :: rest   => loop(f(nextA) :: rest, closed)
+        case Leaf(Right(b)) :: rest      => loop(rest, Some(leaf(b)) :: closed)
+        case Branch(left, right) :: rest => loop(left :: right :: rest, None :: closed)
+        case Nil =>
+          closed.foldLeft(Nil: List[Tree[B]]) { (acc, optTree) =>
+            optTree.map(_ :: acc).getOrElse {
+              acc match {
+                case left :: right :: tail => branch(left, right) :: tail
+                case t                     => t
+              }
+            }
+          }
+      }
+
+    loop(List(f(a)), Nil).head
+  }
+}

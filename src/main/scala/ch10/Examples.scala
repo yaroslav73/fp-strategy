@@ -4,6 +4,7 @@ import cats.data.{ Reader, State, Writer }
 import cats.{ Eval, Monad, MonadError }
 import cats.syntax.all.*
 
+import scala.annotation.tailrec
 import scala.util.Try
 
 // syntax
@@ -336,4 +337,37 @@ import scala.util.Try
     } yield (a, b, c)
 
   println(program.run(1).value)
+}
+
+@main def customMonadExamples(): Unit = {
+  val optionMonad: Monad[Option] = new Monad[Option] {
+    def pure[A](x: A): Option[A] = Option(x)
+
+    def flatMap[A, B](fa: Option[A])(f: A => Option[B]): Option[B] =
+      fa.flatMap(f)
+
+    @tailrec
+    def tailRecM[A, B](a: A)(f: A => Option[Either[A, B]]): Option[B] =
+      f(a) match {
+        case Some(Left(a1)) => tailRecM(a1)(f)
+        case Some(Right(b)) => Option(b)
+        case None           => None
+      }
+  }
+
+  def retry[F[_]: Monad, A](start: A)(f: A => F[A]): F[A] =
+    f(start).flatMap(next => retry(next)(f))
+
+  println(retry(100)(a => if a == 0 then None else Some(a - 1)))
+  // println(retry(100000)(a => if a == 0 then None else Some(a - 1))) // Boom
+
+  def retryTailRecM[F[_]: Monad, A](start: A)(f: A => F[A]): F[A] =
+    Monad[F].tailRecM(start)(next => f(next).map(a => Left(a)))
+
+  println(retryTailRecM(100000)(a => if a == 0 then None else Some(a - 1)))
+
+  def retryM[F[_]: Monad, A](start: A)(f: A => F[A]): F[A] =
+    start.iterateWhileM(f)(_ => true)
+
+  println(retryM(100000)(a => if a == 0 then None else Some(a - 1)))
 }
