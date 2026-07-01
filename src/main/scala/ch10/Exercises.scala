@@ -83,7 +83,7 @@ def evalOne(sym: String): CalcState[Int] = State[List[Int], Int] { oldStack =>
 }
 
 def evalAll(input: List[String]): CalcState[Int] =
-  input.foldLeft(State.pure[List[Int], Int](0)) { (state, sym) =>
+  input.foldLeft(State.empty[List[Int], Int]) { (state, sym) =>
     state.flatMap(_ => evalOne(sym))
   }
 
@@ -121,6 +121,7 @@ object Tree {
       loop(f(a))
     }
 
+    // TODO: fix the implementation
     def tailRecM1[A, B](a: A)(f: A => Tree[Either[A, B]]): Tree[B] = {
       type C = B => Call
 
