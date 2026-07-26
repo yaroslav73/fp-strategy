@@ -2,6 +2,7 @@ package ch11
 
 import cats.data.EitherT
 import cats.syntax.all.*
+import ch11.Exercise.{ Response, getPowerLevel }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
