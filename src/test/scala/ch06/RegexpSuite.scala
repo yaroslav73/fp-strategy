@@ -41,4 +41,15 @@ class RegexpSuite extends munit.FunSuite {
   test("Regexp: should not fail with StackOverflow") {
     assert(Regexp("a").repeat.matches("a" * 20000))
   }
+
+  test("Regexp: compare with Scala implemention") {
+    val r1 = "(z|zxy)ab".r
+    val r2 = Regexp("z").orElse(Regexp("zxy")) //++ Regexp("ab")
+    
+    println(r2)
+    
+    assert(r1.matches("zxyab"))
+    assert(!r2.matches("zxyab"))
+    assert(!r2.matches("z"))
+  }
 }
