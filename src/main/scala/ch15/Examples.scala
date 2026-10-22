@@ -365,4 +365,3 @@ object PrintTrigonometry extends Trigonometry[String] {
   println(onePlusTwo(DoubleArithmetic))
   println(onePlusTwo(PrintArithmetic))
   println(sinOnePlusTwo(PrintArithmetic, PrintTrigonometry))
-

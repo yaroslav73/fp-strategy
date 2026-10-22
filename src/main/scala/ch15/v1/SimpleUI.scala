@@ -81,7 +81,6 @@ def quiz[UI[_]](controls: Controls[UI], layout: Layout[UI]): UI[(String, Int)] =
   println(s"Hello, $name!")
   println(s"You gave tagless final a rating of $rating.")
 
-
 // Refactoring 1
 def name[UI[_]: Controls]: UI[String] =
   Controls[UI].textInput("What is your name?", "John Doe")

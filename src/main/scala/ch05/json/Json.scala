@@ -12,7 +12,7 @@ enum Json {
 object Json {
   def toJson[A](value: A)(using writer: JsonWriter[A]): Json =
     writer.write(value)
-    
+
   object Syntax {
     extension [A](value: A)
       def toJson(using writer: JsonWriter[A]): Json =

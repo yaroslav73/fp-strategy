@@ -53,6 +53,6 @@ def optionM[M[_]: Monad] = {
       x + y
     }
   }
-  
+
   println(res03.value)
 }

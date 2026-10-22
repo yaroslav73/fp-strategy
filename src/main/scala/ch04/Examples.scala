@@ -111,7 +111,7 @@ import ch04.Bool.{ False, True }
 
   val product = list()(1, (a: Int, b: Int) => a * b)
   println(s"Product of the list: $product")
-  
+
   type ListInt = (Int, (Int, Int) => Int) => Int
   val EmptyInt: ListInt =
     (b: Int, f: (Int, Int) => Int) => b

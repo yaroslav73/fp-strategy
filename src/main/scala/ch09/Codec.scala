@@ -1,6 +1,6 @@
 package ch09
 
-trait Codec[A] { self => 
+trait Codec[A] { self =>
   def encode(value: A): String
   def decode(value: String): A
   def imap[B](dec: A => B, enc: B => A): Codec[B] = new Codec[B] {

@@ -32,8 +32,8 @@ object Exercise {
     Await.result(
       canSpecialMove(ally1, ally2).value
         .map {
-          case Left(value) => value
-          case Right(true) => s"$ally1 and $ally2 are ready to roll out!"
+          case Left(value)  => value
+          case Right(true)  => s"$ally1 and $ally2 are ready to roll out!"
           case Right(false) => s"$ally1 and $ally2 need a recharge."
         },
       5.seconds

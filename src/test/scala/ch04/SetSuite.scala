@@ -17,8 +17,8 @@ class SetSuite extends munit.FunSuite {
   }
 
   test("Union of two sets should contain all elements") {
-    val s1 = ListSet.Empty[Int].insert(1).insert(2)
-    val s2 = ListSet.Empty[Int].insert(3).insert(4)
+    val s1    = ListSet.Empty[Int].insert(1).insert(2)
+    val s2    = ListSet.Empty[Int].insert(3).insert(4)
     val union = s1.union(s2)
     assert(union.contains(1))
     assert(union.contains(2))
@@ -27,26 +27,26 @@ class SetSuite extends munit.FunSuite {
   }
 
   test("Union of sets with overlapping elements should not duplicate") {
-    val s1 = ListSet.Empty[Int].insert(1).insert(2)
-    val s2 = ListSet.Empty[Int].insert(2).insert(3)
+    val s1    = ListSet.Empty[Int].insert(1).insert(2)
+    val s2    = ListSet.Empty[Int].insert(2).insert(3)
     val union = s1.union(s2)
     assert(union.contains(1))
     assert(union.contains(2))
     assert(union.contains(3))
   }
-  
+
   test("Evens set should contain even numbers") {
     assert(Set.Evens.contains(2))
     assert(Set.Evens.contains(4))
     assert(Set.Evens.contains(6))
   }
-  
+
   test("Evens set should not contain odd numbers") {
     assert(!Set.Evens.contains(1))
     assert(!Set.Evens.contains(3))
     assert(!Set.Evens.contains(5))
   }
-  
+
   test("IndicatorSet should work correctly") {
     val isEven = Set.IndicatorSet[Int](_ % 2 == 0)
     assert(isEven.contains(2))
