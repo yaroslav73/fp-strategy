@@ -29,6 +29,15 @@ class StreamSuite extends munit.FunSuite {
     assertEquals(s.take(7).toSeq, Seq.fill(3)(47))
   }
 
+  test("merge should combine two Streams") {
+    val result = Stream
+      .fromSeq(Seq(1, 2, 3))
+      .merge(Stream.fromSeq(Seq(4, 5, 6)))
+      .toSeq
+
+    assertEquals(result, Seq(1, 2, 3, 4, 5, 6))
+  }
+
 //  TODO: uncomment when Stream will be optimized
 //  test("build Stream from big Seq") {
 //    val s = Stream.fromSeq(Seq.fill(100_000)(1))

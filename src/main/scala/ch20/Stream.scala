@@ -9,6 +9,7 @@ enum Stream[A]:
   case Map[A, B](source: Stream[A], f: A => B) extends Stream[B]
   case Product[A, B](left: Stream[A], right: Stream[B]) extends Stream[(A, B)]
   case Take(source: Stream[A], count: Int) extends Stream[A]
+  case Merge(first: Stream[A], second: Stream[A]) extends Stream[A]
   case FromIterator(it: Iterator[A]) extends Stream[A]
   case FromSeq(seq: Seq[A]) extends Stream[A]
 
@@ -31,6 +32,10 @@ enum Stream[A]:
           else
             c.taken = taken + 1
             elem
+        case Compiled.Merge(first, second) =>
+          val elem = next(first)
+          if elem.isEmpty then next(second)
+          else elem
         case Compiled.FromIterator(it) => it.nextOption()
         case c @ Compiled.FromSeq(seq, idx) =>
           if idx == seq.size then None
@@ -50,6 +55,8 @@ enum Stream[A]:
 
   def take(count: Int): Stream[A] = Take(this, count)
 
+  def merge(that: Stream[A]): Stream[A] = Merge(this, that)
+
   def toSeq: Seq[A] = foldLeft(Seq.empty)(_ :+ _)
 
 object Stream:
@@ -57,6 +64,7 @@ object Stream:
     case Map[A, B](source: Compiled[A], f: A => B) extends Compiled[B]
     case Product[A, B](left: Compiled[A], right: Compiled[B]) extends Compiled[(A, B)]
     case Take(source: Compiled[A], count: Int, var taken: Int = 0) extends Compiled[A]
+    case Merge(first: Compiled[A], second: Compiled[A]) extends Compiled[A]
     case FromIterator(it: Iterator[A]) extends Compiled[A]
     case FromSeq(seq: Seq[A], var idx: Int = 0) extends Compiled[A]
 
@@ -66,6 +74,7 @@ object Stream:
         case Stream.Map(source, f)       => Map(fromStream(source), f)
         case Stream.Product(left, right) => Product(fromStream(left), fromStream(right))
         case Stream.Take(source, count)  => Take(fromStream(source), count)
+        case Stream.Merge(first, second) => Merge(fromStream(first), fromStream(second))
         case Stream.FromIterator(it)     => FromIterator(it)
         case Stream.FromSeq(seq)         => FromSeq(seq)
       }
