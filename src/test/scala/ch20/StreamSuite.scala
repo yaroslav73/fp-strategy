@@ -17,6 +17,18 @@ class StreamSuite extends munit.FunSuite {
     assertEquals(s.toSeq, Seq(1, 2, 3))
   }
 
+  test("take n elements from Stream") {
+    val s = Stream.fromSeq(Seq.fill(100)(47))
+
+    assertEquals(s.take(7).toSeq, Seq.fill(7)(47))
+  }
+
+  test("take more elements then Stream contains") {
+    val s = Stream.fromSeq(Seq.fill(3)(47))
+
+    assertEquals(s.take(7).toSeq, Seq.fill(3)(47))
+  }
+
 //  TODO: uncomment when Stream will be optimized
 //  test("build Stream from big Seq") {
 //    val s = Stream.fromSeq(Seq.fill(100_000)(1))
