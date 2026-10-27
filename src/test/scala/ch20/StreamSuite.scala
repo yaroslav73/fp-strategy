@@ -38,6 +38,15 @@ class StreamSuite extends munit.FunSuite {
     assertEquals(result, Seq(1, 2, 3, 4, 5, 6))
   }
 
+  test("filter should return only elements fulfilled pred") {
+    val result = Stream
+      .fromSeq(Seq(1, 2, 3, 4, 5, 6))
+      .filter(_ % 2 == 0)
+      .toSeq
+
+    assertEquals(result, Seq(2, 4, 6))
+  }
+
 //  TODO: uncomment when Stream will be optimized
 //  test("build Stream from big Seq") {
 //    val s = Stream.fromSeq(Seq.fill(100_000)(1))

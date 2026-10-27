@@ -10,6 +10,7 @@ enum Stream[A]:
   case Product[A, B](left: Stream[A], right: Stream[B]) extends Stream[(A, B)]
   case Take(source: Stream[A], count: Int) extends Stream[A]
   case Merge(first: Stream[A], second: Stream[A]) extends Stream[A]
+  case Filter(source: Stream[A], pred: A => Boolean) extends Stream[A]
   case FromIterator(it: Iterator[A]) extends Stream[A]
   case FromSeq(seq: Seq[A]) extends Stream[A]
 
@@ -36,6 +37,11 @@ enum Stream[A]:
           val elem = next(first)
           if elem.isEmpty then next(second)
           else elem
+        case Compiled.Filter(source, pred) =>
+          next(source) match {
+            case e @ Some(elem) if pred(elem) => e
+            case _                            => next(source)
+          }
         case Compiled.FromIterator(it) => it.nextOption()
         case c @ Compiled.FromSeq(seq, idx) =>
           if idx == seq.size then None
@@ -57,6 +63,8 @@ enum Stream[A]:
 
   def merge(that: Stream[A]): Stream[A] = Merge(this, that)
 
+  def filter(pred: A => Boolean): Stream[A] = Filter(this, pred)
+
   def toSeq: Seq[A] = foldLeft(Seq.empty)(_ :+ _)
 
 object Stream:
@@ -65,6 +73,7 @@ object Stream:
     case Product[A, B](left: Compiled[A], right: Compiled[B]) extends Compiled[(A, B)]
     case Take(source: Compiled[A], count: Int, var taken: Int = 0) extends Compiled[A]
     case Merge(first: Compiled[A], second: Compiled[A]) extends Compiled[A]
+    case Filter(source: Compiled[A], pred: A => Boolean) extends Compiled[A]
     case FromIterator(it: Iterator[A]) extends Compiled[A]
     case FromSeq(seq: Seq[A], var idx: Int = 0) extends Compiled[A]
 
@@ -75,6 +84,7 @@ object Stream:
         case Stream.Product(left, right) => Product(fromStream(left), fromStream(right))
         case Stream.Take(source, count)  => Take(fromStream(source), count)
         case Stream.Merge(first, second) => Merge(fromStream(first), fromStream(second))
+        case Stream.Filter(source, pred) => Filter(fromStream(source), pred)
         case Stream.FromIterator(it)     => FromIterator(it)
         case Stream.FromSeq(seq)         => FromSeq(seq)
       }
