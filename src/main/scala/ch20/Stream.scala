@@ -38,10 +38,14 @@ enum Stream[A]:
           if elem.isEmpty then next(second)
           else elem
         case Compiled.Filter(source, pred) =>
-          next(source) match {
-            case e @ Some(elem) if pred(elem) => e
-            case _                            => next(source)
-          }
+          @tailrec
+          def loop(source: Compiled[C]): Option[C] =
+            next(source) match
+              case Some(elem) => if pred(elem) then Some(elem) else loop(source)
+              case None =>
+                None
+
+          loop(source)
         case Compiled.FromIterator(it) => it.nextOption()
         case c @ Compiled.FromSeq(seq, idx) =>
           if idx == seq.size then None

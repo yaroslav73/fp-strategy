@@ -40,7 +40,7 @@ class StreamSuite extends munit.FunSuite {
 
   test("filter should return only elements fulfilled pred") {
     val result = Stream
-      .fromSeq(Seq(1, 2, 3, 4, 5, 6))
+      .fromSeq(Seq(1, 1, 2, 3, 4, 5, 6, 7))
       .filter(_ % 2 == 0)
       .toSeq
 
