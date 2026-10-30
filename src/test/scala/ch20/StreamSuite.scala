@@ -35,7 +35,16 @@ class StreamSuite extends munit.FunSuite {
       .merge(Stream.fromSeq(Seq(4, 5, 6)))
       .toSeq
 
-    assertEquals(result, Seq(1, 2, 3, 4, 5, 6))
+    assertEquals(result, Seq(1, 4, 2, 5, 3, 6))
+  }
+
+  test("merge should combine two Streams with different length") {
+    val result = Stream
+      .fromSeq(Seq(1, 2, 3))
+      .merge(Stream.fromSeq(Seq(4)))
+      .toSeq
+
+    assertEquals(result, Seq(1, 4, 2))
   }
 
   test("filter should return only elements fulfilled pred") {
