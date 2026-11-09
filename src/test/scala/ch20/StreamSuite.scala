@@ -3,11 +3,9 @@ package ch20
 class StreamSuite extends munit.FunSuite {
   test("build Stream from Iterator") {
     val s1 = Stream.fromIterator(Iterator(1, 2, 3))
-    val s2 = Stream.fromIterator(Iterator(4, 5, 6))
-    val s3 = s1.product(s2)
 
-    assertEquals(s3.toSeq, Seq((1, 4), (2, 5), (3, 6)))
-    assertEquals(s3.toSeq, Seq.empty)
+    assertEquals(s1.toSeq, Seq(1, 2, 3))
+    assertEquals(s1.toSeq, Seq.empty)
   }
 
   test("build Stream from Seq") {
@@ -15,6 +13,14 @@ class StreamSuite extends munit.FunSuite {
 
     assertEquals(s.toSeq, Seq(1, 2, 3))
     assertEquals(s.toSeq, Seq(1, 2, 3))
+  }
+
+  test("product create tuple of elements from two Streams") {
+    val s1 = Stream.fromSeq(Seq(1, 2, 3))
+    val s2 = Stream.fromSeq(Seq(4, 5, 6))
+    val s3 = s1.product(s2)
+
+    assertEquals(s3.toSeq, Seq((1, 4), (2, 5), (3, 6)))
   }
 
   test("take n elements from Stream") {
@@ -54,6 +60,17 @@ class StreamSuite extends munit.FunSuite {
       .toSeq
 
     assertEquals(result, Seq(2, 4, 6))
+  }
+
+  test("filter from merged Streams") {
+    val result = Stream
+      .fromIterator(Iterator.continually(1))
+      .filter(_ != 1)
+      .merge(Stream.fromSeq(Seq(2)))
+      .take(1)
+      .toSeq
+
+    assertEquals(result, Seq(2))
   }
 
 //  TODO: uncomment when Stream will be optimized

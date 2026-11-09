@@ -1,9 +1,5 @@
 package ch20
 
-import cats.syntax.all.*
-import ch20.Stream.Pos
-
-import scala.None
 import scala.annotation.tailrec
 
 enum Stream[A]:
@@ -20,52 +16,16 @@ enum Stream[A]:
   def product[B](that: Stream[B]) = Product(this, that)
 
   def foldLeft[B](zero: B)(f: (B, A) => B): B =
-    import Stream.Compiled
+    import Stream.{ Compiled, Emit }
 
-    val compiled = Stream.Compiled.fromStream(this)
-
-    def next[C](compiled: Compiled[C]): Option[C] =
-      compiled match {
-        case Compiled.Map(source, f)       => next(source).map(f)
-        case Compiled.Product(left, right) => (next(left), next(right)).tupled
-        case c @ Compiled.Take(source, count, taken) =>
-          val elem = next(source)
-          if taken == count || elem.isEmpty then None
-          else
-            c.taken = taken + 1
-            elem
-        case c @ Compiled.Merge(left, right, takeFrom) =>
-          takeFrom match {
-            case Pos.Left =>
-              c.takeFrom = Pos.Right
-              next(left)
-            case Pos.Right =>
-              c.takeFrom = Pos.Left
-              next(right)
-          }
-        case Compiled.Filter(source, pred) =>
-          @tailrec
-          def loop(source: Compiled[C]): Option[C] =
-            next(source) match
-              case Some(elem) => if pred(elem) then Some(elem) else loop(source)
-              case None =>
-                None
-
-          loop(source)
-        case Compiled.FromIterator(it) => it.nextOption()
-        case c @ Compiled.FromSeq(seq, idx) =>
-          if idx == seq.size then None
-          else
-            val elem = seq(idx)
-            c.idx = idx + 1
-            Some(elem)
-      }
+    val compiled = Compiled.fromStream(this)
 
     @tailrec
     def loop(zero: B): B =
-      next(compiled) match
-        case Some(value) => loop(f(zero, value))
-        case None        => zero
+      compiled.next match
+        case Emit.Value(v) => loop(f(zero, v))
+        case Emit.Wait     => loop(zero)
+        case Emit.End      => zero
 
     loop(zero)
 
@@ -78,23 +38,117 @@ enum Stream[A]:
   def toSeq: Seq[A] = foldLeft(Seq.empty)(_ :+ _)
 
 object Stream:
+  enum Emit[+A]:
+    case Value(get: A) // The pull produce a value
+    case Wait // There is no value available now, but there may be in the future
+    case End // The Stream has ended and no values will ever be available
+
+    def map[B](f: A => B): Emit[B] =
+      this match
+        case Value(v) => Value(f(v))
+        case Wait     => Wait
+        case End      => End
+
   enum Pos:
     case Left, Right
 
+  enum ProductState[+A, +B]:
+    case Continue // Pull from both left and righ
+    case CacheLeft(left: A) // Left value is cached. Pull from right.
+    case CacheRight(right: B) // Right value is cached. Pull from left.
+    case End
+
   enum Compiled[A]:
     case Map[A, B](source: Compiled[A], f: A => B) extends Compiled[B]
-    case Product[A, B](left: Compiled[A], right: Compiled[B]) extends Compiled[(A, B)]
+    case Product[A, B](left: Compiled[A], right: Compiled[B], var state: ProductState[A, B]) extends Compiled[(A, B)]
     case Take(source: Compiled[A], count: Int, var taken: Int = 0) extends Compiled[A]
     case Merge(left: Compiled[A], right: Compiled[A], var takeFrom: Pos = Pos.Left) extends Compiled[A]
     case Filter(source: Compiled[A], pred: A => Boolean) extends Compiled[A]
     case FromIterator(it: Iterator[A]) extends Compiled[A]
     case FromSeq(seq: Seq[A], var idx: Int = 0) extends Compiled[A]
 
+    def next: Emit[A] =
+      this match {
+        case Compiled.Map(source, f) => source.next.map(f)
+        case c @ Compiled.Product(left, right, state) =>
+          state match {
+            case ProductState.Continue =>
+              (left.next, right.next) match
+                case (Emit.End, _) =>
+                  c.state = ProductState.End
+                  Emit.End
+                case (_, Emit.End) =>
+                  c.state = ProductState.End
+                  Emit.End
+                case (Emit.Wait, Emit.Wait) =>
+                  Emit.Wait
+                case (Emit.Wait, Emit.Value(r)) =>
+                  c.state = ProductState.CacheRight(r)
+                  Emit.Wait
+                case (Emit.Value(l), Emit.Wait) =>
+                  c.state = ProductState.CacheLeft(l)
+                  Emit.Wait
+                case (Emit.Value(l), Emit.Value(r)) =>
+                  Emit.Value((l, r))
+            case ProductState.CacheLeft(l) =>
+              right.next match
+                case Emit.Value(r) =>
+                  c.state = ProductState.Continue
+                  Emit.Value((l, r))
+                case Emit.Wait =>
+                  Emit.Wait
+                case Emit.End =>
+                  c.state = ProductState.End
+                  Emit.End
+            case ProductState.CacheRight(r) =>
+              left.next match
+                case Emit.Value(l) =>
+                  c.state = ProductState.Continue
+                  Emit.Value((l, r))
+                case Emit.Wait =>
+                  Emit.Wait
+                case Emit.End =>
+                  c.state = ProductState.End
+                  Emit.End
+            case ProductState.End => Emit.End
+          }
+        case c @ Compiled.Take(source, count, taken) =>
+          if taken == count then Emit.End
+          else
+            source.next match
+              case v @ Emit.Value(_) =>
+                c.taken = taken + 1
+                v
+              case other => other
+        case c @ Compiled.Merge(left, right, takeFrom) =>
+          takeFrom match
+            case Pos.Left =>
+              c.takeFrom = Pos.Right
+              left.next
+            case Pos.Right =>
+              c.takeFrom = Pos.Left
+              right.next
+        case Compiled.Filter(source, pred) =>
+          source.next match
+            case Emit.Value(v) if pred(v) => Emit.Value(v)
+            case Emit.Value(_)            => Emit.Wait
+            case Emit.Wait                => Emit.Wait
+            case Emit.End                 => Emit.End
+        case Compiled.FromIterator(it) =>
+          if it.hasNext then Emit.Value(it.next) else Emit.End
+        case c @ Compiled.FromSeq(seq, idx) =>
+          if idx == seq.size then Emit.End
+          else
+            val elem = seq(idx)
+            c.idx = idx + 1
+            Emit.Value(elem)
+      }
+
   object Compiled:
     def fromStream[A](stream: Stream[A]): Compiled[A] =
       stream match {
         case Stream.Map(source, f)       => Map(fromStream(source), f)
-        case Stream.Product(left, right) => Product(fromStream(left), fromStream(right))
+        case Stream.Product(left, right) => Product(fromStream(left), fromStream(right), ProductState.Continue)
         case Stream.Take(source, count)  => Take(fromStream(source), count)
         case Stream.Merge(left, right)   => Merge(fromStream(left), fromStream(right))
         case Stream.Filter(source, pred) => Filter(fromStream(source), pred)
