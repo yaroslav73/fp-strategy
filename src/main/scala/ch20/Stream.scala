@@ -4,6 +4,7 @@ import scala.annotation.tailrec
 
 enum Stream[A]:
   case Map[A, B](source: Stream[A], f: A => B) extends Stream[B]
+  case FlatMap[A, B](source: Stream[A], f: A => Stream[B]) extends Stream[B]
   case Product[A, B](left: Stream[A], right: Stream[B]) extends Stream[(A, B)]
   case Take(source: Stream[A], count: Int) extends Stream[A]
   case Merge(left: Stream[A], right: Stream[A]) extends Stream[A]
@@ -12,6 +13,8 @@ enum Stream[A]:
   case FromSeq(seq: Seq[A]) extends Stream[A]
 
   def map[B](f: A => B): Stream[B] = Map(this, f)
+
+  def flatMap[B](f: A => Stream[B]): Stream[B] = FlatMap(this, f)
 
   def product[B](that: Stream[B]) = Product(this, that)
 
@@ -39,7 +42,7 @@ enum Stream[A]:
 
 object Stream:
   enum Emit[+A]:
-    case Value(get: A) // The pull produce a value
+    case Value(v: A) // The pull produce a value
     case Wait // There is no value available now, but there may be in the future
     case End // The Stream has ended and no values will ever be available
 
@@ -60,6 +63,7 @@ object Stream:
 
   enum Compiled[A]:
     case Map[A, B](source: Compiled[A], f: A => B) extends Compiled[B]
+    case FlatMap[A, B](source: Compiled[A], f: A => Compiled[B], var state: Option[Compiled[B]]) extends Compiled[B]
     case Product[A, B](left: Compiled[A], right: Compiled[B], var state: ProductState[A, B]) extends Compiled[(A, B)]
     case Take(source: Compiled[A], count: Int, var taken: Int = 0) extends Compiled[A]
     case Merge(left: Compiled[A], right: Compiled[A], var takeFrom: Pos = Pos.Left) extends Compiled[A]
@@ -70,6 +74,25 @@ object Stream:
     def next: Emit[A] =
       this match {
         case Compiled.Map(source, f) => source.next.map(f)
+        case c @ Compiled.FlatMap(source, f, state) =>
+          state match {
+            case Some(s) =>
+              s.next match {
+                case Emit.End =>
+                  c.state = None
+                  Emit.Wait
+                case other => other
+              }
+            case None =>
+              source.next match {
+                case Emit.Value(v) =>
+                  val newState = f(v)
+                  c.state = Some(newState)
+                  Emit.Wait
+                case Emit.Wait => Emit.Wait
+                case Emit.End  => Emit.End
+              }
+          }
         case c @ Compiled.Product(left, right, state) =>
           state match {
             case ProductState.Continue =>
@@ -148,6 +171,7 @@ object Stream:
     def fromStream[A](stream: Stream[A]): Compiled[A] =
       stream match {
         case Stream.Map(source, f)       => Map(fromStream(source), f)
+        case Stream.FlatMap(source, f)   => FlatMap(fromStream(source), a => fromStream(f(a)), state = None)
         case Stream.Product(left, right) => Product(fromStream(left), fromStream(right), ProductState.Continue)
         case Stream.Take(source, count)  => Take(fromStream(source), count)
         case Stream.Merge(left, right)   => Merge(fromStream(left), fromStream(right))

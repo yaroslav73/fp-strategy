@@ -73,6 +73,33 @@ class StreamSuite extends munit.FunSuite {
     assertEquals(result, Seq(2))
   }
 
+  test("flatMap elements in the Stream") {
+    val result = Stream
+      .fromSeq(Seq(1, 2, 3))
+      .flatMap(n => Stream.fromSeq(Seq(n, n)))
+      .toSeq
+
+    assertEquals(result, Seq(1, 1, 2, 2, 3, 3))
+  }
+
+  test("flatMap elements in the Stream with empty Stream") {
+    val result = Stream
+      .fromSeq(Seq(1, 2, 3))
+      .flatMap(n => Stream.fromSeq(Seq.empty[Int]))
+      .toSeq
+
+    assertEquals(result, Seq.empty)
+  }
+
+  test("flatMap elements in the Stream with filter") {
+    val result = Stream
+      .fromSeq(Seq(1, 2))
+      .flatMap(n => Stream.fromSeq(Seq(n)).filter(_ > 1))
+      .toSeq
+
+    assertEquals(result, Seq(2))
+  }
+
 //  TODO: uncomment when Stream will be optimized
 //  test("build Stream from big Seq") {
 //    val s = Stream.fromSeq(Seq.fill(100_000)(1))
