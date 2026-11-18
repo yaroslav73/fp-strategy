@@ -1,6 +1,7 @@
 package ch24
 
-import cats.implicits.{ catsSyntaxEitherId, catsSyntaxSemigroup }
+import cats.data.Validated
+import cats.syntax.apply.*
 import cats.kernel.Semigroup
 
 // value => value in a context
@@ -8,15 +9,19 @@ import cats.kernel.Semigroup
 // error as a String is not the best representation
 // type Check[E, A] => A => Either[E, A]
 
-final case class Check[E, A](f: A => Either[E, A]) {
-  def apply(value: A): Either[E, A] = f(value)
+trait Check[E, A] {
+  import Check.*
 
-  def and(that: Check[E, A])(using Semigroup[E]): Check[E, A] = Check { a =>
-    (this(a), that(a)) match {
-      case (Left(e1), Left(e2)) => (e1.combine(e2)).asLeft
-      case (Left(e), Right(_))  => e.asLeft
-      case (Right(_), Left(e))  => e.asLeft
-      case (Right(_), Right(_)) => a.asRight
+  def apply(a: A)(using s: Semigroup[E]): Validated[E, A] =
+    this match {
+      case Pure(f)            => f(a)
+      case And(first, second) => (first(a), second(a)).mapN((_, _) => a)
     }
-  }
+
+  def and(that: Check[E, A]): Check[E, A] = And(this, that)
+}
+
+object Check {
+  final case class Pure[E, A](f: A => Validated[E, A]) extends Check[E, A]
+  final case class And[E, A](first: Check[E, A], second: Check[E, A]) extends Check[E, A]
 }
