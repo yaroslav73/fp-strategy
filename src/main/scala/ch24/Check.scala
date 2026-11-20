@@ -29,11 +29,13 @@ object Check {
 
   final case class FlatMap[E, A, B, C](check: Check[E, A, B], f: B => Check[E, A, C]) extends Check[E, A, C] {
     def apply(a: A)(using s: Semigroup[E]): Validated[E, C] =
-      check(a).withEither(either => either.flatMap(b => f(b)(a).toEither))
+      check(a) match {
+        case Validated.Valid(b)        => f(b)(a)
+        case ve @ Validated.Invalid(_) => ve
+      }
   }
 
   final case class AndThen[E, A, B, C](first: Check[E, A, B], second: Check[E, B, C]) extends Check[E, A, C] {
     def apply(a: A)(using s: Semigroup[E]): Validated[E, C] = first(a).andThen(b => second(b))
-//    def apply(a: A)(using s: Semigroup[E]): Validated[E, C] = first(a).withEither(_.flatMap(b => second(b).toEither))
   }
 }
